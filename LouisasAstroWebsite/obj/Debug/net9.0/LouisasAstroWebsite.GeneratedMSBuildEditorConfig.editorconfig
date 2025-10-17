@@ -36,6 +36,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Ib21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/matthewdavis/RiderProjects/BlazorWebApp1/LouisasAstroWebsite/Components/Pages/ManageUsers.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9NYW5hZ2VVc2Vycy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/matthewdavis/RiderProjects/BlazorWebApp1/LouisasAstroWebsite/Components/Pages/Weather.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9XZWF0aGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
