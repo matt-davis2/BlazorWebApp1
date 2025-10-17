@@ -1,23 +1,21 @@
 using LouisasAstroWebsite.Components;
 using LouisasAstroWebsite.Data;
+using LouisasAstroWebsite.Services;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-//MongoDB
+// MongoDB
 var mongoConn = builder.Configuration.GetConnectionString("MongoDb");
-builder.Services.AddSingleton<IMongoClient>(new MongoClient(mongoConn));
-builder.Services.AddScoped(x =>
+builder.Services.AddSingleton<IMongoClient>(sp => new MongoClient(mongoConn));
+builder.Services.AddScoped(sp =>
 {
-    var client = x.GetRequiredService<IMongoClient>();
+    var client = sp.GetRequiredService<IMongoClient>();
     var database = client.GetDatabase("GirlfriendDB");
-
-    // Check if collection exists, create if not
     var filter = new BsonDocument();
     var collections = database.ListCollectionsAsync(new ListCollectionsOptions { Filter = filter }).Result;
     var collectionNames = collections.ToList().Select(c => c["name"].AsString);
@@ -25,30 +23,34 @@ builder.Services.AddScoped(x =>
     {
         database.CreateCollection("users");
     }
-
     return database.GetCollection<User>("users");
 });
 
-// Add API controllers
+// Register UserService
+builder.Services.AddScoped<UserService>();
+
+// Add API controllers and Swagger
 builder.Services.AddControllers();
+builder.Services.AddSwaggerGen(); // From Swashbuckle
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
-
 app.UseAntiforgery();
-
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger(); // From Swashbuckle
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "LouisasAstroWebsite API v1"));
+}
 
 app.Run();
