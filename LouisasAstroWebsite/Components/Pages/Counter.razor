@@ -1,20 +1,133 @@
-﻿@page "/counter"
-@rendermode InteractiveServer
+﻿@page "/manageusers"
+@using MongoDB.Bson
 
-<PageTitle>Counter</PageTitle>
+<PageTitle>Manage Users</PageTitle>
 
-<h1>Counter</h1>
+<h3>Manage Users</h3>
 
-<p role="status">Current count: @currentCount</p>
+<!-- Add/Edit User Form -->
+<div class="mb-3">
+    <div class="input-group">
+        <input @bind="CurrentUser.FirstName" class="form-control" placeholder="Enter user name" />
+        <button @onclick="SaveUser" class="btn btn-primary ms-2">@(EditingUser == null ? "Add User" : "Save Changes")</button>
+        @if (EditingUser != null)
+        {
+            <button @onclick="CancelEdit" class="btn btn-secondary ms-2">Cancel</button>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="alert alert-danger mt-2">@ErrorMessage</div>
+    }
+</div>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<!-- User List -->
+@if (Users == null)
+{
+    <p>Loading...</p>
+}
+else if (Users.Count == 0)
+{
+    <p>No users found.</p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var user in Users)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                User #@user.Id.ToString().Substring(0, 8) - @user.FirstName
+                <div>
+                    <button @onclick="() => EditUser(user)" class="btn btn-warning btn-sm me-2">Edit</button>
+                    <button @onclick="() => DeleteUser(user.Id)" class="btn btn-danger btn-sm">Delete</button>
+                </div>
+            </li>
+        }
+    </ul>
+}
 
 @code {
-    private int currentCount = 0;
+    [Inject]
+    public UserService UserService { get; set; } = default!; // Nullable with ! for DI
 
-    private void IncrementCount()
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = default!; // Nullable with ! for DI
+
+    private List<User> Users = new List<User>(); // Initialize to avoid CS8618
+    private User CurrentUser = new User(); // Initialize
+    private User EditingUser = null; // Nullable
+    private string ErrorMessage = string.Empty; // Initialize
+
+    protected override async Task OnInitializedAsync()
     {
-        currentCount++;
+        await LoadUsers();
     }
 
+    private async Task LoadUsers()
+    {
+        Users = await UserService.GetUsersAsync() ?? new List<User>();
+        StateHasChanged();
+    }
+
+    private void EditUser(User user)
+    {
+        EditingUser = user with { }; // Create a copy
+        CurrentUser = new User
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            PasswordHash = user.PasswordHash,
+            CreatedDate = user.CreatedDate,
+            IsActive = user.IsActive,
+            Preferences = user.Preferences
+        };
+        ErrorMessage = null;
+    }
+
+    private void CancelEdit()
+    {
+        EditingUser = null;
+        CurrentUser = new User();
+        ErrorMessage = null;
+    }
+
+    private async Task SaveUser()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentUser.FirstName))
+        {
+            ErrorMessage = "Name is required.";
+            return;
+        }
+
+        if (EditingUser == null)
+        {
+            // Add new user
+            var newUser = new User
+            {
+                FirstName = CurrentUser.FirstName,
+                LastName = string.Empty,
+                Email = $"{CurrentUser.FirstName.ToLower()}@example.com",
+                PasswordHash = string.Empty
+            };
+            await UserService.CreateUserAsync(newUser);
+        }
+        else
+        {
+            // Update existing user
+            CurrentUser.Id = EditingUser.Id;
+            await UserService.UpdateUserAsync(EditingUser.Id, CurrentUser);
+            EditingUser = null;
+        }
+
+        CurrentUser = new User();
+        await LoadUsers();
+    }
+
+    private async Task DeleteUser(ObjectId id)
+    {
+        await UserService.DeleteUserAsync(id);
+        await LoadUsers();
+    }
 }

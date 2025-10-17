@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LouisasAstroWebsite")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a5de83e175d5279ec08c5fe5d329fcea60bba6c6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e0fad0d4eb321ccc7542b34f1157bd9b04351b71")]
 [assembly: System.Reflection.AssemblyProductAttribute("LouisasAstroWebsite")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LouisasAstroWebsite")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -8,9 +8,13 @@
 <!-- Add/Edit User Form -->
 <div class="mb-3">
     <div class="input-group">
-        <input @bind="CurrentUser.FirstName" class="form-control" placeholder="Enter user name" />
-        <button @onclick="SaveUser" class="btn btn-primary ms-2">@(EditingUser == null ? "Add User" : "Save Changes")</button>
-        @if (EditingUser != null)
+        <input @bind="CurrentUser.FirstName" class="form-control" placeholder="First Name" />
+        <input @bind="CurrentUser.LastName" class="form-control ms-2" placeholder="Last Name" style="max-width: 150px;" />
+        <input @bind="CurrentUser.Email" type="email" class="form-control ms-2" placeholder="Email" style="max-width: 200px;" />
+        <button @onclick="SaveUser" class="btn btn-primary ms-2">
+            @(EditingUserId == null ? "Add User" : "Save Changes")
+        </button>
+        @if (EditingUserId != null)
         {
             <button @onclick="CancelEdit" class="btn btn-secondary ms-2">Cancel</button>
         }
@@ -36,7 +40,7 @@ else
         @foreach (var user in Users)
         {
             <li class="list-group-item d-flex justify-content-between align-items-center">
-                User #@user.Id.ToString().Substring(0, 8) - @user.FirstName
+                User #@user.Id.ToString().Substring(0, 8) - @user.FirstName @user.LastName
                 <div>
                     <button @onclick="() => EditUser(user)" class="btn btn-warning btn-sm me-2">Edit</button>
                     <button @onclick="() => DeleteUser(user.Id)" class="btn btn-danger btn-sm">Delete</button>
@@ -55,8 +59,11 @@ else
 
     private List<User> Users = new List<User>(); // Initialize to avoid CS8618
     private User CurrentUser = new User(); // Initialize
-    private User EditingUser = null; // Nullable
+    // REMOVED: private User EditingUser = null; // No longer needed
     private string ErrorMessage = string.Empty; // Initialize
+    
+    // Keep this for tracking edits
+    private ObjectId? EditingUserId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -71,26 +78,21 @@ else
 
     private void EditUser(User user)
     {
-        EditingUser = user with { }; // Create a copy
+        EditingUserId = user.Id; // Track which user we're editing
+    
+        // Populate form with user data
         CurrentUser = new User
         {
             Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Email = user.Email,
-            PasswordHash = user.PasswordHash,
-            CreatedDate = user.CreatedDate,
+            FirstName = user.FirstName ?? string.Empty,
+            LastName = user.LastName ?? string.Empty,
+            Email = user.Email ?? string.Empty,
+            PasswordHash = user.PasswordHash ?? string.Empty,
             IsActive = user.IsActive,
             Preferences = user.Preferences
         };
-        ErrorMessage = null;
-    }
-
-    private void CancelEdit()
-    {
-        EditingUser = null;
-        CurrentUser = new User();
-        ErrorMessage = null;
+    
+        ErrorMessage = string.Empty;
     }
 
     private async Task SaveUser()
@@ -101,28 +103,45 @@ else
             return;
         }
 
-        if (EditingUser == null)
+        try
         {
-            // Add new user
-            var newUser = new User
+            if (EditingUserId == null || EditingUserId == ObjectId.Empty)
             {
-                FirstName = CurrentUser.FirstName,
-                LastName = string.Empty,
-                Email = $"{CurrentUser.FirstName.ToLower()}@example.com",
-                PasswordHash = string.Empty
-            };
-            await UserService.CreateUserAsync(newUser);
-        }
-        else
-        {
-            // Update existing user
-            CurrentUser.Id = EditingUser.Id;
-            await UserService.UpdateUserAsync(EditingUser.Id, CurrentUser);
-            EditingUser = null;
-        }
+                // Add new user
+                var newUser = new User
+                {
+                    FirstName = CurrentUser.FirstName,
+                    LastName = CurrentUser.LastName ?? string.Empty,
+                    Email = string.IsNullOrWhiteSpace(CurrentUser.Email) 
+                        ? $"{CurrentUser.FirstName.ToLower()}@example.com"
+                        : CurrentUser.Email,
+                    PasswordHash = CurrentUser.PasswordHash ?? string.Empty, // This is fine (string is reference type)
+                    IsActive = CurrentUser.IsActive, // Remove ?? - bool can't be null
+                    Preferences = CurrentUser.Preferences
+                };
+                await UserService.CreateUserAsync(newUser);
+            }
+            else
+            {
+                // Update existing user
+                CurrentUser.Id = EditingUserId.Value;
+                await UserService.UpdateUserAsync(EditingUserId.Value, CurrentUser);
+            }
 
-        CurrentUser = new User();
-        await LoadUsers();
+            CancelEdit();
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error saving user: {ex.Message}";
+        }
+    }
+
+    private void CancelEdit()
+    {
+        EditingUserId = null;
+        CurrentUser = new User(); // Reset form
+        ErrorMessage = string.Empty;
     }
 
     private async Task DeleteUser(ObjectId id)
